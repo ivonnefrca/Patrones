@@ -1,0 +1,74 @@
+--Diagramas Notificaciones--
+--Diagrama de clases--
+
+@startuml
+title Patrón Strategy + Composite para notificaciones
+
+interface INotificador {
+    +void Enviar(string mensaje, Destinatario destinatario)
+}
+
+class NotificadorCompuesto implements INotificador {
+    - List<INotificador> canales
+    + void Agregar(INotificador canal)
+    + void Quitar(INotificador canal)
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+class NotificadorCorreo implements INotificador {
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+class NotificadorSMS implements INotificador {
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+class NotificadorWhatsApp implements INotificador {
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+class NotificadorSlack implements INotificador {
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+
+class OtrasNotficaciones implements INotificador {
+    + void Enviar(string mensaje, Destinatario destinatario)
+}
+
+
+class Destinatario {
+    + string Email
+    + string Telefono
+    + string SlackChannel
+}
+
+INotificador <|.. NotificadorCompuesto
+INotificador <|.. NotificadorCorreo
+INotificador <|.. NotificadorSMS
+INotificador <|.. NotificadorWhatsApp
+INotificador <|.. NotificadorSlack
+
+NotificadorCompuesto --> INotificador : contiene *
+@enduml
+
+
+--Diagrama de arquiectura--
+@startuml
+title Arquitectura de notificaciones
+
+rectangle "Notificaciones" {
+    [Servicio Pedidos] --> (Evento: Pedido Completado)
+    (Evento: Pedido Completado) --> [Servicio Notificaciones]
+
+    [Servicio Notificaciones] --> [NotificadorCompuesto]
+    [NotificadorCompuesto] --> [Canal Correo]
+    [NotificadorCompuesto] --> [Canal SMS]
+    [NotificadorCompuesto] --> [Canal WhatsApp]
+    [NotificadorCompuesto] --> [Canal Slack]
+    [NotificadorCompuesto] --> [Otros Canales]
+}
+
+database "BD Configuración" as BDConfig
+[Servicio Notificaciones] --> BDConfig : obtiene canales habilitados
+@enduml

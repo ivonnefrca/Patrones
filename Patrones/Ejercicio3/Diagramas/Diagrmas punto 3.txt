@@ -1,0 +1,112 @@
+--Diagrama de aquitecura--
+
+
+@startuml
+title Arquitectura 
+
+package "Frontend / UI" {
+  class ClienteUI
+  class Usuario <<actor>>
+}
+
+package "API / Aplicación" {
+  class ControladorTareas
+  class Invocador
+  class ServicioAplicacion
+  class HistorialComandos
+}
+
+package "Dominio" {
+  interface ICommand
+  class CrearTareaCommand
+  class EditarTareaCommand
+  class EliminarTareaCommand
+  class CompletarTareaCommand
+  class GestorTareas
+  class Tarea
+}
+
+package "Infraestructura" {
+  class RepositorioTareas
+  class BusEventos
+}
+
+' Relaciones de flujo
+Usuario --> ClienteUI : usa
+ClienteUI --> ControladorTareas : HTTP/UX request
+ControladorTareas --> ServicioAplicacion : /crear /editar /eliminar /completar
+ServicioAplicacion --> Invocador : construir y enviar ICommand
+Invocador --> GestorTareas : Ejecuta la acción (receiver)
+GestorTareas --> RepositorioTareas : persistir/consultar
+Invocador --> HistorialComandos : registrar comando ejecutado
+HistorialComandos ..> Invocador : provee Undo/Redo
+GestorTareas --> BusEventos : publicar cambios (opcional)
+
+' Extensibilidad: nuevos comandos
+ICommand <|.. CrearTareaCommand
+ICommand <|.. EditarTareaCommand
+ICommand <|.. EliminarTareaCommand
+ICommand <|.. CompletarTareaCommand
+
+@enduml
+
+--Diagrama de clases--
+@startuml
+title Diagrama de Clases
+
+' Capas representadas con package (solo clases e interfaces)
+package "Capa Presentación" {
+  class UI
+  class Usuario <<actor>>
+}
+
+package "Capa Aplicación" {
+  class Invocador
+  class Historial
+}
+
+package "Capa Dominio" {
+  interface ICommand
+  class CrearTareaCommand
+  class EditarTareaCommand
+  class EliminarTareaCommand
+  class CompletarTareaCommand
+  class GestorTareas
+  class Tarea
+}
+
+package "Capa Persistencia" {
+  class RepositorioTareas
+}
+
+' Herencia / implementación
+ICommand <|.. CrearTareaCommand
+ICommand <|.. EditarTareaCommand
+ICommand <|.. EliminarTareaCommand
+ICommand <|.. CompletarTareaCommand
+
+' Relaciones receptor / invocador / repositorio
+CrearTareaCommand --> GestorTareas : receptor
+EditarTareaCommand --> GestorTareas : receptor
+EliminarTareaCommand --> GestorTareas : receptor
+CompletarTareaCommand --> GestorTareas : receptor
+
+GestorTareas --> RepositorioTareas : persiste cambios
+
+' Invocador ejecuta comandos y mantiene historial
+Invocador --> ICommand : Ejecutar()
+Invocador --> Historial : Push(ICommand)
+Historial --> ICommand : Pop()/Peek()
+
+' Flujo desde UI / Usuario
+Usuario --> UI : Interacción
+UI --> Invocador : Crear y enviar ICommand
+
+' Clase Tarea (atributos simplificados)
+Tarea : +int Id
+Tarea : +string Titulo
+Tarea : +string Descripcion
+Tarea : +bool Completada
+
+@enduml
+

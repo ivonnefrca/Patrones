@@ -1,0 +1,108 @@
+---Diagrama de arquiectura--
+
+@startuml
+title Arquitectura - Generación de Reporte PDF
+
+skinparam packageStyle rectangle
+
+package "Aplicación (API / UI)" as App {
+  class "Controlador Reportes" as Ctrl
+  class "Servicio de Reportes" as Svc
+}
+
+package "Dominio" as Dom {
+  class Builder as "ReportePdf.Builder"
+  interface ISeccionReporte
+  class SeccionPortada
+  class SeccionGraficos
+  class SeccionMovimientos
+  class SeccionTendencias
+  class SeccionPieAsesor
+  class ReportePdf
+}
+
+package "Infraestructura" as Infra {
+  class "Generador PDF" as GenPdf
+  class "Repositorio Datos Cliente" as Repo
+}
+
+' Representamos al actor como clase con estereotipo (evita cambiar el tipo de diagrama)
+class Cliente <<actor>>
+
+Cliente ..> Ctrl : solicita reporte
+Ctrl ..> Svc : GenerarReporte(clienteId, opciones)
+Svc ..> Repo : obtener datos
+Svc ..> Builder : construir paso a paso
+Builder "1" o-- "*" ISeccionReporte : agrega
+ISeccionReporte <|.. SeccionPortada
+ISeccionReporte <|.. SeccionGraficos
+ISeccionReporte <|.. SeccionMovimientos
+ISeccionReporte <|.. SeccionTendencias
+ISeccionReporte <|.. SeccionPieAsesor
+Builder ..> ReportePdf : Build()
+Svc ..> GenPdf : Render(reporte, datos)
+GenPdf ..> Svc : PDF
+Svc ..> Ctrl : retorna PDF
+Ctrl ..> Cliente : descarga
+
+@enduml
+
+
+
+--Diagrama de clases--
+@startuml
+title Reporte PDF - Builder
+
+class ReportePdf {
+  - string Cliente
+  - Periodo Periodo
+  - Guid Id
+  - List<ISeccionReporte> Secciones (solo lectura)
+  - DateTime GeneradoEn
+  + IReadOnlyList<ISeccionReporte> GetSecciones()
+}
+
+class ReportePdfBuilder {
+  - string cliente
+  - Periodo periodo
+  - List<ISeccionReporte> secciones
+  - bool portadaAgregada
+  + static ReportePdfBuilder ForCliente(string cliente)
+  + ReportePdfBuilder DelPeriodo(DateTime desde, DateTime hasta)
+  + ReportePdfBuilder ConPortada(string logoPath)
+  + ReportePdfBuilder AddSeccion(ISeccionReporte seccion)
+  + ReportePdfBuilder AddSeccionIf(bool cond, Func<ISeccionReporte> factory)
+  + ReportePdfBuilder WithIf(bool cond, Action<ReportePdfBuilder> step)
+  + ReportePdf Build()
+}
+
+interface ISeccionReporte {
+  + string Nombre { get; }
+  + void Render(DocumentoPdf doc, ContextoDatos ctx)
+}
+
+class SeccionPortada implements ISeccionReporte {
+  - string LogoPath
+  - string Cliente
+}
+
+class SeccionGraficos implements ISeccionReporte {
+  - TipoGrafico tipo
+}
+
+class SeccionMovimientos implements ISeccionReporte {}
+
+class SeccionTendencias implements ISeccionReporte {}
+
+class SeccionPieAsesor implements ISeccionReporte {
+  - string Contacto
+}
+
+class Periodo {
+  + DateTime Desde
+  + DateTime Hasta
+}
+
+ReportePdfBuilder --> ISeccionReporte : agrega *
+ReportePdf o-- ISeccionReporte : contiene *
+@enduml
